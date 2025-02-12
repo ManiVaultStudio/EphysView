@@ -1,0 +1,5 @@
+{
+    "name" : "Ephys Viewer",
+    "version" : "1.0",
+    "dependencies" : ["Points"]
+}

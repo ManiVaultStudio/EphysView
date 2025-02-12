@@ -1,0 +1,162 @@
+#include "EphysViewer.h"
+
+#include <event/Event.h>
+
+#include <DatasetsMimeData.h>
+
+#include <QDebug>
+#include <QMimeData>
+#include <fstream>
+#include <sstream>
+
+Q_PLUGIN_METADATA(IID "studio.manivault.EphysViewer")
+
+using namespace mv;
+
+namespace
+{
+    bool isEphysFeatures(mv::Dataset<DatasetImpl> dataset)
+    {
+        return dataset->hasProperty("PatchSeqType") && dataset->getProperty("PatchSeqType").toString() == "E";
+    }
+
+    bool isEphysTraces(mv::Dataset<DatasetImpl> dataset)
+    {
+        return dataset->hasProperty("PatchSeqType") && dataset->getProperty("PatchSeqType").toString() == "EphysTraces";
+    }
+
+    bool isMetadata(mv::Dataset<DatasetImpl> dataset)
+    {
+        return dataset->hasProperty("PatchSeqType") && dataset->getProperty("PatchSeqType").toString() == "Metadata";
+    }
+}
+
+EphysView::EphysView(const PluginFactory* factory) :
+    ViewPlugin(factory),
+    _dropWidget(nullptr),
+    _scene(),
+    _ephysWidget(new EphysWidget(this, &_scene)),
+    _primaryToolbarAction(this, "PrimaryToolbar"),
+    _settingsAction(this, "SettingsAction")
+{
+
+}
+
+void EphysView::init()
+{
+    // Create layout
+    auto layout = new QVBoxLayout();
+
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    //_primaryToolbarAction.addAction(&_settingsAction.getLineRendererButton());
+    //_primaryToolbarAction.addAction(&_settingsAction.getRealRendererButton());
+
+    layout->addWidget(_primaryToolbarAction.createWidget(&getWidget()));
+    layout->addWidget(_ephysWidget);
+
+    // Apply the layout
+    getWidget().setLayout(layout);
+
+    // Respond when the name of the dataset in the dataset reference changes
+    connect(&_scene._cellMetadata, &Dataset<Text>::guiNameChanged, this, [this]()
+    {
+        // Only show the drop indicator when nothing is loaded in the dataset reference
+        _dropWidget->setShowDropIndicator(_scene._cellMetadata->getGuiName().isEmpty());
+    });
+
+    // Alternatively, classes which derive from hdsp::EventListener (all plugins do) can also respond to events
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetAdded));
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetDataChanged));
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetRemoved));
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetDataSelectionChanged));
+    _eventListener.registerDataEventByType(PointType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
+    _eventListener.registerDataEventByType(TextType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
+    _eventListener.registerDataEventByType(EphysType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
+
+    // Check if any usable datasets are already available, if so, use them
+    for (mv::Dataset dataset : mv::data().getAllDatasets())
+    {
+        if (isEphysFeatures(dataset))
+            _scene._ephysFeatures = dataset;
+        if (isEphysTraces(dataset))
+            _scene._ephysTraces = dataset;
+        if (isMetadata(dataset))
+            _scene._cellMetadata = dataset;
+    }
+}
+
+void EphysView::onDataEvent(mv::DatasetEvent* dataEvent)
+{
+    // Get smart pointer to dataset that changed
+    const auto changedDataSet = dataEvent->getDataset();
+
+    // Get GUI name of the dataset that changed
+    const auto datasetGuiName = changedDataSet->getGuiName();
+
+    // The data event has a type so that we know what type of data event occurred (e.g. data added, changed, removed, renamed, selection changes)
+    switch (dataEvent->getType()) {
+
+        // A points dataset was added
+        case EventType::DatasetAdded:
+        {
+            // Cast the data event to a data added event
+            const auto dataAddedEvent = static_cast<DatasetAddedEvent*>(dataEvent);
+
+            if (isEphysFeatures(changedDataSet))
+                _scene._ephysFeatures = changedDataSet;
+            if (isEphysTraces(changedDataSet))
+                _scene._ephysTraces = changedDataSet;
+            if (isMetadata(changedDataSet))
+                _scene._cellMetadata = changedDataSet;
+
+            qDebug() << _scene._ephysFeatures.isValid();
+            qDebug() << _scene._ephysTraces.isValid();
+            qDebug() << _scene._cellMetadata.isValid();
+
+            // Get the GUI name of the added points dataset and print to the console
+            qDebug() << datasetGuiName << "was added";
+
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+ViewPlugin* EphysViewFactory::produce()
+{
+    return new EphysView(this);
+}
+
+mv::DataTypes EphysViewFactory::supportedDataTypes() const
+{
+    DataTypes supportedTypes;
+
+    // This example analysis plugin is compatible with points datasets
+    supportedTypes.append(TextType);
+
+    return supportedTypes;
+}
+
+mv::gui::PluginTriggerActions EphysViewFactory::getPluginTriggerActions(const mv::Datasets& datasets) const
+{
+    PluginTriggerActions pluginTriggerActions;
+
+    const auto getPluginInstance = [this]() -> EphysView* {
+        return dynamic_cast<EphysView*>(plugins().requestViewPlugin(getKind()));
+    };
+
+    const auto numberOfDatasets = datasets.count();
+
+    if (numberOfDatasets >= 1 && PluginFactory::areAllDatasetsOfTheSameType(datasets, TextType)) {
+        auto pluginTriggerAction = new PluginTriggerAction(const_cast<EphysViewFactory*>(this), this, "Ephys Viewer", "View electrophysiology traces", getIcon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
+            for (auto dataset : datasets)
+                getPluginInstance();
+        });
+
+        pluginTriggerActions << pluginTriggerAction;
+    }
+
+    return pluginTriggerActions;
+}
