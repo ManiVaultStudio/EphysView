@@ -33,7 +33,7 @@ function drawTrace(jsonDoc)
             .range([0, width]);
 
         var y = d3.scaleLinear()
-            .domain([d3.min(data, d => d.y), d3.max(data, d => d.y)])
+            .domain([-120, 50])
             .range([height, 0]);
 
         // Add X axis
