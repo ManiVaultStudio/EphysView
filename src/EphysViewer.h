@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EphysWidget.h"
+#include "EphysWebWidget.h"
 
 #include "SettingsAction.h"
 
@@ -62,7 +62,7 @@ private:
 
     Scene                           _scene;
 
-    EphysWidget*                    _ephysWidget;
+    EphysWebWidget*                 _ephysWidget;
 };
 
 /**

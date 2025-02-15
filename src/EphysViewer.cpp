@@ -35,7 +35,7 @@ EphysView::EphysView(const PluginFactory* factory) :
     ViewPlugin(factory),
     _dropWidget(nullptr),
     _scene(),
-    _ephysWidget(new EphysWidget(this, &_scene)),
+    _ephysWidget(new EphysWebWidget(this, &_scene)),
     _primaryToolbarAction(this, "PrimaryToolbar"),
     _settingsAction(this, "SettingsAction")
 {
@@ -52,8 +52,11 @@ void EphysView::init()
     //_primaryToolbarAction.addAction(&_settingsAction.getLineRendererButton());
     //_primaryToolbarAction.addAction(&_settingsAction.getRealRendererButton());
 
-    layout->addWidget(_primaryToolbarAction.createWidget(&getWidget()));
-    layout->addWidget(_ephysWidget);
+        // Load webpage
+    _ephysWidget->setPage(":ephys_viewer/ephys_viewer/trace_view.html", "qrc:/ephys_viewer/ephys_viewer/");
+
+    layout->addWidget(_primaryToolbarAction.createWidget(&getWidget()), 1);
+    layout->addWidget(_ephysWidget, 99);
 
     // Apply the layout
     getWidget().setLayout(layout);
@@ -73,7 +76,7 @@ void EphysView::init()
     _eventListener.registerDataEventByType(PointType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
     _eventListener.registerDataEventByType(TextType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
     _eventListener.registerDataEventByType(EphysType, std::bind(&EphysView::onDataEvent, this, std::placeholders::_1));
-
+    
     // Check if any usable datasets are already available, if so, use them
     for (mv::Dataset dataset : mv::data().getAllDatasets())
     {
@@ -84,6 +87,9 @@ void EphysView::init()
         if (isMetadata(dataset))
             _scene._cellMetadata = dataset;
     }
+    qDebug() << _scene._ephysFeatures.isValid();
+    qDebug() << _scene._ephysTraces.isValid();
+    qDebug() << _scene._cellMetadata.isValid();
 }
 
 void EphysView::onDataEvent(mv::DatasetEvent* dataEvent)
@@ -110,6 +116,7 @@ void EphysView::onDataEvent(mv::DatasetEvent* dataEvent)
             if (isMetadata(changedDataSet))
                 _scene._cellMetadata = changedDataSet;
 
+            qDebug() << "Data added";
             qDebug() << _scene._ephysFeatures.isValid();
             qDebug() << _scene._ephysTraces.isValid();
             qDebug() << _scene._cellMetadata.isValid();
@@ -118,6 +125,14 @@ void EphysView::onDataEvent(mv::DatasetEvent* dataEvent)
             qDebug() << datasetGuiName << "was added";
 
             break;
+        }
+        case EventType::DatasetDataChanged:
+        {
+            qDebug() << "Data changed";
+            //std::vector<Experiment> experiments = _scene._ephysTraces->getData();
+            const std::vector<Recording>& recordings = _scene._ephysTraces->getData()[0].getAcquisitions();
+
+            _ephysWidget->setData(recordings);
         }
         default:
             break;

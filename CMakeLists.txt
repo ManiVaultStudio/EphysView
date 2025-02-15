@@ -34,8 +34,8 @@ find_package(ManiVault COMPONENTS Core PointData TextData CONFIG REQUIRED)
 set(PLUGIN_SOURCES
     src/EphysViewer.h
     src/EphysViewer.cpp
-    src/EphysWidget.h
-    src/EphysWidget.cpp
+    src/EphysWebWidget.h
+    src/EphysWebWidget.cpp
     src/SettingsAction.h
     src/SettingsAction.cpp
     src/Scene.h
@@ -49,7 +49,7 @@ set(RENDER_SOURCES
 )
 
 set(QRESOURCES
-    res/resources.qrc
+    res/ephys_viewer_resources.qrc
 )
 QT6_ADD_RESOURCES(RESOURCE_FILES ${QRESOURCES})
 

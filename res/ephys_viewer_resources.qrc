@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="ephys_viewer">
+        <file>ephys_viewer/trace_view.html</file>
+        <file>ephys_viewer/trace_view.css</file>
+        <file>ephys_viewer/trace_view.tools.js</file>
+        <file>ephys_viewer/trace_view.js</file>
+    </qresource>
+    <qresource prefix="ephys_viewer">
+        <file>js_libs/qwebchannel.tools.js</file>
+    </qresource>
+        <qresource prefix="ephys_viewer">
+        <file>js_libs/qwebchannel.tools.js</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/Trace.vert</file>
+        <file>shaders/Trace.frag</file>
+    </qresource>
+</RCC>
