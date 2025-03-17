@@ -165,7 +165,7 @@ mv::gui::PluginTriggerActions EphysViewFactory::getPluginTriggerActions(const mv
     const auto numberOfDatasets = datasets.count();
 
     if (numberOfDatasets >= 1 && PluginFactory::areAllDatasetsOfTheSameType(datasets, TextType)) {
-        auto pluginTriggerAction = new PluginTriggerAction(const_cast<EphysViewFactory*>(this), this, "Ephys Viewer", "View electrophysiology traces", getIcon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
+        auto pluginTriggerAction = new PluginTriggerAction(const_cast<EphysViewFactory*>(this), this, "Ephys Viewer", "View electrophysiology traces", icon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
             for (auto dataset : datasets)
                 getPluginInstance();
         });
