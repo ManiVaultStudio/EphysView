@@ -56,6 +56,9 @@ public:
     void onDataEvent(mv::DatasetEvent* dataEvent);
 
 private:
+    void onCellSelectionChanged();
+
+private:
     HorizontalToolbarAction         _primaryToolbarAction;      /** Horizontal toolbar for primary content */
     SettingsAction                  _settingsAction;
     DropWidget*                     _dropWidget;                /** Widget for drag and drop behavior */

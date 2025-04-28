@@ -4,6 +4,8 @@
 
 #include <DatasetsMimeData.h>
 
+#include <util/Timer.h>
+
 #include <QDebug>
 #include <QMimeData>
 #include <fstream>
@@ -68,7 +70,9 @@ void EphysView::init()
         _dropWidget->setShowDropIndicator(_scene._cellMetadata->getGuiName().isEmpty());
     });
 
-    // Alternatively, classes which derive from hdsp::EventListener (all plugins do) can also respond to events
+    connect(&_scene._ephysTraces, &Dataset<Text>::changed, this, [this]() { connect(&_scene._ephysTraces, &Dataset<Text>::dataSelectionChanged, this, &EphysView::onCellSelectionChanged); });
+
+    // Alternatively, classes which derive from mv::EventListener (all plugins do) can also respond to events
     _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetAdded));
     _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetDataChanged));
     _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetRemoved));
@@ -128,15 +132,56 @@ void EphysView::onDataEvent(mv::DatasetEvent* dataEvent)
         }
         case EventType::DatasetDataChanged:
         {
-            qDebug() << "Data changed";
-            //std::vector<Experiment> experiments = _scene._ephysTraces->getData();
-            const std::vector<Recording>& recordings = _scene._ephysTraces->getData()[0].getAcquisitions();
+            if (isEphysTraces(changedDataSet))
+            {
+                qDebug() << "Data changed";
+                //std::vector<Experiment> experiments = _scene._ephysTraces->getData();
+                //const std::vector<Recording>& acquisitions = _scene._ephysTraces->getData()[0].getAcquisitions();
 
-            _ephysWidget->setData(recordings);
+                //_ephysWidget->setData(recordings);
+            }
         }
         default:
             break;
     }
+}
+
+void EphysView::onCellSelectionChanged()
+{
+    if (!_scene._ephysTraces.isValid())
+        return;
+
+    if (!_scene._cellMetadata.isValid())
+    {
+        qWarning() << "No cell metadata dataset set.";
+        return;
+    }
+
+    if (!_scene._ephysFeatures.isValid())
+    {
+        qWarning() << "No ephys features dataset found by EphysView.";
+        return;
+    }
+
+    const auto& selectionIndices = _scene._ephysTraces->getSelectionIndices();
+
+    Timer t("OnCellSelectedChanged");
+    
+    std::vector<Recording> cellAcquisitions;
+    std::vector<Recording> cellStimuli;
+    for (uint32_t index: selectionIndices)
+    {
+        const std::vector<Recording>& acquisitions = _scene._ephysTraces->getData()[index].getAcquisitions();
+        const std::vector<Recording>& stimuli = _scene._ephysTraces->getData()[index].getStimuli();
+
+        cellAcquisitions.push_back(acquisitions[7]);
+        cellStimuli.push_back(stimuli[7]);
+    }
+
+    _ephysWidget->setData(cellAcquisitions, cellStimuli);
+
+    qDebug() << "Selection indices ephys: " << selectionIndices.size();
+    qDebug() << "Selection indices ephys2: " << _scene._ephysTraces->getSelection()->getSelectionIndices().size();
 }
 
 ViewPlugin* EphysViewFactory::produce()

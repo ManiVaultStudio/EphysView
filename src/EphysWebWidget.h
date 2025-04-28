@@ -44,7 +44,7 @@ public:
 
     JSCommunicationObject& getCommObject() { return _commObject; }
 
-    void setData(const std::vector<Recording>& recordings);
+    void setData(const std::vector<Recording>& acquisitions, const std::vector<Recording>& stimuli);
 
 private slots:
     void onWebPageFullyLoaded();

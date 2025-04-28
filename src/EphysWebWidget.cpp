@@ -2,6 +2,8 @@
 
 #include "EphysViewer.h"
 
+#include <util/Timer.h>
+
 #include <QLayout>
 
 #include <QJsonDocument>
@@ -50,34 +52,57 @@ EphysWebWidget::~EphysWebWidget()
 
 }
 
-void EphysWebWidget::setData(const std::vector<Recording>& recordings)
+void EphysWebWidget::setData(const std::vector<Recording>& acquisitions, const std::vector<Recording>& stimuli)
 {
-    QJsonObject finalObject;
+    Timer t("SetData");
 
-    for (int i = 0; i < recordings.size(); i++)
+    if (acquisitions.size() != stimuli.size())
     {
-        const Recording& recording = recordings[i];
-
-        QJsonArray xArray, yArray;
-
-        // Convert std::vector<float> to QJsonArray
-        for (float x : recording.data.xSeries)
-            xArray.append(x);
-
-        for (float y : recording.data.ySeries)
-            yArray.append(y);
-
-        // Create a JSON object
-        QJsonObject jsonObject;
-        jsonObject["xData"] = xArray;
-        jsonObject["yData"] = yArray;
-
-        finalObject.insert("data_" + QString::number(i), jsonObject);
+        qWarning() << "[EphysViewer] Num acquisitions not same as num stimuli, skipping drawing..";
+        return;
     }
 
-    QJsonDocument doc(finalObject);
+    QJsonArray graphArray;
+    
+    int numRecordings = acquisitions.size(); // Should be the same as stimuli.size()
+    for (int i = 0; i < numRecordings; i++)
+    {
+        QJsonArray acqXData, acqYData, stimXData, stimYData;
+        QJsonObject acquisitionObj, stimulusObj;
+
+        const Recording& acquisition = acquisitions[i];
+        const Recording& stimulus = stimuli[i];
+
+        for (float x : acquisition.GetData().xSeries)
+            acqXData.append(x);
+        for (float y : acquisition.GetData().ySeries)
+            acqYData.append(y);
+        for (float x : stimulus.GetData().xSeries)
+            stimXData.append(x);
+        for (float y : stimulus.GetData().ySeries)
+            stimYData.append(y);
+
+        acquisitionObj["xData"] = acqXData;
+        acquisitionObj["yData"] = acqYData;
+        stimulusObj["xData"] = stimXData;
+        stimulusObj["yData"] = stimYData;
+
+        QJsonObject graphObj;
+        graphObj.insert("acquisition", acquisitionObj);
+        graphObj.insert("stimulus", stimulusObj);
+        graphObj.insert("title", acquisition.GetStimulusDescription());
+
+        graphArray.append(graphObj);
+    }
+
+    QJsonObject rootObj;
+    rootObj.insert("graphs", graphArray);
+
+    QJsonDocument doc(rootObj);
     QString strJson(doc.toJson(QJsonDocument::Indented));
-    //std::cout << strJson.toStdString() << std::endl;
+    std::cout << strJson.toStdString() << std::endl;
+
+    t.printElapsedTime("SetData", true);
     _commObject.setData(strJson);
     qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Set Data >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
 }
@@ -94,6 +119,8 @@ void EphysWebWidget::onWebPageFullyLoaded()
 {
     qDebug() << "EphysWebWidget::onWebPageFullyLoaded: Web page completely loaded.";
     //emit webPageLoaded();
+
+    qDebug() << "EphysWebWidget size: " << width() << height();
 }
 
 void EphysWebWidget::onPartitionHovered(QString name)
