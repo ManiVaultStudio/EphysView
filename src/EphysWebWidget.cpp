@@ -14,6 +14,39 @@
 
 #include <iostream>
 
+QStringList newFormatStims = { "X1PS_SubThresh", "X3LP_Rheo", "X4PS_SupraThresh" };
+QStringList oldFormatStims = { "C1LSFINEST150112", "C1LSCOARSE150216", "C1LSFINESTMICRO", "C1LSCOARSEMICRO" };
+
+namespace
+{
+    void addRecordingToArray(QJsonArray& recordingArray, const Recording& acquisition, const Recording& stimulus)
+    {
+        QJsonArray acqXData, acqYData, stimXData, stimYData;
+        QJsonObject acquisitionObj, stimulusObj;
+
+        for (float x : acquisition.GetData().xSeries)
+            acqXData.append(x);
+        for (float y : acquisition.GetData().ySeries)
+            acqYData.append(y);
+        for (float x : stimulus.GetData().xSeries)
+            stimXData.append(x);
+        for (float y : stimulus.GetData().ySeries)
+            stimYData.append(y);
+
+        acquisitionObj["xData"] = acqXData;
+        acquisitionObj["yData"] = acqYData;
+        stimulusObj["xData"] = stimXData;
+        stimulusObj["yData"] = stimYData;
+
+        QJsonObject recordingObj;
+        recordingObj.insert("acquisition", acquisitionObj);
+        recordingObj.insert("stimulus", stimulusObj);
+        //recordingObj.insert("title", acquisition.GetStimulusDescription());
+
+        recordingArray.append(recordingObj);
+    }
+}
+
 // =============================================================================
 // JSCommunicationObject
 // =============================================================================
@@ -52,6 +85,96 @@ EphysWebWidget::~EphysWebWidget()
 
 }
 
+void EphysWebWidget::setData(std::vector<Experiment>& experiments, const std::vector<uint32_t>& selectionIndices)
+{
+    Timer t("SetData");
+
+    std::vector<Recording> cellAcquisitions;
+    std::vector<Recording> cellStimuli;
+
+    QJsonArray graphArray;
+
+    for (uint32_t index : selectionIndices)
+    {
+        // Per cell get its acquisitions and stimuli and determine what to render
+        const std::vector<Recording>& acquisitions = experiments[index].getAcquisitions();
+        const std::vector<Recording>& stimuli = experiments[index].getStimuli();
+
+        if (acquisitions.size() != stimuli.size())
+        {
+            qWarning() << "[EphysViewer] Num acquisitions not same as num stimuli, skipping drawing..";
+            return;
+        }
+
+        // Find out which stimsets to draw
+        bool newFormat = false;
+        for (const Recording& acquisition : acquisitions)
+        {
+            if (newFormatStims.contains(acquisition.GetStimulusDescription()))
+                newFormat = true;
+        }
+
+        // Build list of recordings that should be included in the cell's graph
+        QJsonArray recordingArray;
+        QStringList& includedStims = newFormat ? newFormatStims : oldFormatStims;
+
+        float axMin = std::numeric_limits<float>::max();
+        float axMax = -std::numeric_limits<float>::max();
+        float ayMin = std::numeric_limits<float>::max();
+        float ayMax = -std::numeric_limits<float>::max();
+
+        float sxMin = std::numeric_limits<float>::max();
+        float sxMax = -std::numeric_limits<float>::max();
+        float syMin = std::numeric_limits<float>::max();
+        float syMax = -std::numeric_limits<float>::max();
+
+        for (int i = 0; i < acquisitions.size(); i++)
+        {
+            const Recording& acquisition = acquisitions[i];
+            const Recording& stimulus = stimuli[i];
+
+            if (includedStims.contains(acquisition.GetStimulusDescription()))
+            {
+                if (recordingArray.count() >= 3)
+                    break;
+
+                addRecordingToArray(recordingArray, acquisition, stimulus);
+
+                if (acquisition.GetData().xMin < axMin) axMin = acquisition.GetData().xMin;
+                if (acquisition.GetData().xMax > axMax) axMax = acquisition.GetData().xMax;
+                if (acquisition.GetData().yMin < ayMin) ayMin = acquisition.GetData().yMin;
+                if (acquisition.GetData().yMax > ayMax) ayMax = acquisition.GetData().yMax;
+                
+                if (stimulus.GetData().xMin < sxMin) sxMin = stimulus.GetData().xMin;
+                if (stimulus.GetData().xMax > sxMax) sxMax = stimulus.GetData().xMax;
+                if (stimulus.GetData().yMin < syMin) syMin = stimulus.GetData().yMin;
+                if (stimulus.GetData().yMax > syMax) syMax = stimulus.GetData().yMax;
+            }
+        }
+
+        QJsonObject graphObj;
+        graphObj["title"] = "Long Square";
+        graphObj["recordings"] = recordingArray;
+
+        // Store graph extents
+        graphObj["stimExtentX"] = QJsonArray{ sxMin, sxMax };
+        graphObj["stimExtentY"] = QJsonArray{ syMin, syMax };
+        graphObj["acqExtentX"] = QJsonArray{ axMin, axMax };
+        graphObj["acqExtentY"] = QJsonArray{ ayMin, ayMax };
+
+        graphArray.append(graphObj);
+    }
+
+    QJsonObject rootObj;
+    rootObj.insert("graphs", graphArray);
+
+    QJsonDocument doc(rootObj);
+    QString strJson(doc.toJson(QJsonDocument::Indented));
+
+    t.printElapsedTime("SetData", true);
+    _commObject.setData(strJson);
+}
+
 void EphysWebWidget::setData(const std::vector<Recording>& acquisitions, const std::vector<Recording>& stimuli)
 {
     Timer t("SetData");
@@ -61,7 +184,7 @@ void EphysWebWidget::setData(const std::vector<Recording>& acquisitions, const s
         qWarning() << "[EphysViewer] Num acquisitions not same as num stimuli, skipping drawing..";
         return;
     }
-
+    qDebug() << "Number in setData" << acquisitions.size();
     QJsonArray graphArray;
     
     int numRecordings = acquisitions.size(); // Should be the same as stimuli.size()
@@ -100,7 +223,7 @@ void EphysWebWidget::setData(const std::vector<Recording>& acquisitions, const s
 
     QJsonDocument doc(rootObj);
     QString strJson(doc.toJson(QJsonDocument::Indented));
-    std::cout << strJson.toStdString() << std::endl;
+    //std::cout << strJson.toStdString() << std::endl;
 
     t.printElapsedTime("SetData", true);
     _commObject.setData(strJson);

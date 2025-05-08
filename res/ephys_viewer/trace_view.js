@@ -11,125 +11,244 @@ function drawTrace(jsonDoc)
     const keyAcq = "acquisition";
     const keyStim = "stimulus";
     const keyTitle = "title";
-
-    function drawStimulus(selector, graphObj)
-    {
-        // Set dimensions and margins
-        var margin = { top: 40, right: 10, bottom: 20, left: 45 },
-            width = 200 - margin.left - margin.right,
-            height = 120 - margin.top - margin.bottom;
-        
-        let stim_xData = graphObj[keyStim]["xData"];
-        let stim_yData = graphObj[keyStim]["yData"];
-        let titleData = graphObj[keyTitle];
-        
-        let stim_data = stim_xData.map((x, i) => ({ x: x, y: stim_yData[i] }));
-        
-        // Append the SVG object to the container
-        var svg = d3.select(selector)
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .style("display", "block")
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-        
-        // Add chart title
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", -margin.top / 2)
-            .attr("text-anchor", "middle")
-            .style("font-size", "12px")
-            .style("font-weight", "bold")
-            .text(titleData || ""); // default to empty string if title not provided
-
-        // Define scales
-        var x = d3.scaleLinear()
-            .domain(d3.extent(stim_data, d => d.x))
-            .range([0, width]);
-
-        var y = d3.scaleLinear()
-            .domain(d3.extent(stim_data, d => d.y * 2))
-            .range([height, 0]);
-
-        // Add X axis
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x).ticks(3));
-
-        // Add Y axis
-        svg.append("g")
-            .call(d3.axisLeft(y).ticks(4));
-        
-        // Add X axis label
-        svg.append("text")
-            .attr("x", width / 2) // Center the label
-            .attr("y", height + margin.bottom - 10) // Position below the X-axis
-            .style("text-anchor", "middle") // Center the text
-            .style("font-size", "10px") // Make text smaller
-            .text(""); // Unit
-    
-        // Add Y axis label
-        svg.append("text")
-            .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
-            .attr("y", -margin.left + 5) // Adjust positioning
-            .attr("x", -height / 2) // Center the label
-            .attr("dy", "1em") // Fine-tune spacing
-            .style("text-anchor", "middle") // Center align text
-            .style("font-size", "10px") // Make text smaller
-            .text("pA"); // Unit
-
-        // Add the stimulus line
-        svg.append("path")
-            .datum(stim_data)
-            .attr("fill", "none")
-            .attr("stroke", "orangered")
-            .attr("stroke-width", 1.5)
-            .attr("d", d3.line()
-                .x(d => x(d.x))
-                .y(d => y(d.y))
-            );
-    }
+    const keyStimExtentX = "stimExtentX";
+    const keyStimExtentY = "stimExtentY";
+    const keyAcqExtentX = "acqExtentX";
+    const keyAcqExtentY = "acqExtentY";
 
     function drawGraph(selector, graphObj)
     {
-        // Set dimensions and margins
-        var margin = { top: 20, right: 10, bottom: 40, left: 45 },
-            width = 200 - margin.left - margin.right,
-            height = 180 - margin.top - margin.bottom;
-        
-        const ps = performance.now()
-        
-        // Append the SVG object to the container
-        var svg = d3.select(selector)
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .style("display", "block")
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        function drawStimulusGraph(selector, graphObj)
+        {
+            // Set dimensions and margins
+            var margin = { top: 40, right: 10, bottom: 20, left: 45 },
+                width = 200 - margin.left - margin.right,
+                height = 120 - margin.top - margin.bottom;
+            
+            // Append the SVG object to the container
+            var svg = d3.select(selector)
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .style("display", "block")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            
+            let titleData = graphObj[keyTitle];
+            let stimExtentX = graphObj[keyStimExtentX];
+            let stimExtentY = graphObj[keyStimExtentY];
+            
+            // Add chart title
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", -margin.top / 2)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .style("font-weight", "bold")
+                .text(titleData || ""); // default to empty string if title not provided
+            
+            // Define scales
+            var x = d3.scaleLinear()
+                .domain(stimExtentX)
+                .range([0, width]);
 
-        const pm1 = performance.now()
+            var y = d3.scaleLinear()
+                .domain(stimExtentY)
+                .range([height, 0]);
 
-        // Avoid undefined access
-        if (!graphObj[keyAcq] || !graphObj[keyStim]) {
-            log(`Missing data for index ${i}:`, graphObj);
-            return;
+            // Add X axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x).ticks(3));
+
+            // Add Y axis
+            svg.append("g")
+                .call(d3.axisLeft(y).ticks(4));
+            
+            // Add X axis label
+            svg.append("text")
+                .attr("x", width / 2) // Center the label
+                .attr("y", height + margin.bottom - 10) // Position below the X-axis
+                .style("text-anchor", "middle") // Center the text
+                .style("font-size", "10px") // Make text smaller
+                .text(""); // Unit
+        
+            // Add Y axis label
+            svg.append("text")
+                .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
+                .attr("y", -margin.left + 5) // Adjust positioning
+                .attr("x", -height / 2) // Center the label
+                .attr("dy", "1em") // Fine-tune spacing
+                .style("text-anchor", "middle") // Center align text
+                .style("font-size", "10px") // Make text smaller
+                .text("pA"); // Unit
+                
+            return svg;
         }
-
-        let acq_xData = graphObj[keyAcq]["xData"];
-        let acq_yData = graphObj[keyAcq]["yData"];
-
-        let stim_xData = graphObj[keyStim]["xData"];
-        let stim_yData = graphObj[keyStim]["yData"];
-        let titleData = graphObj[keyTitle];
         
-        const pm2 = performance.now()
-        // Convert to D3-friendly format
-        let acq_data = acq_xData.map((x, i) => ({ x: x, y: acq_yData[i] }));
-        let stim_data = stim_xData.map((x, i) => ({ x: x, y: stim_yData[i] }));
+        function drawAcquisitionGraph(selector, graphObj)
+        {
+            // Set dimensions and margins
+            var margin = { top: 20, right: 10, bottom: 40, left: 45 },
+                width = 200 - margin.left - margin.right,
+                height = 180 - margin.top - margin.bottom;
+            
+            const ps = performance.now()
+            
+            // Append the SVG object to the container
+            var svg = d3.select(selector)
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .style("display", "block")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        const pm3 = performance.now()
+            const pm1 = performance.now()
+
+            let acqExtentX = graphObj[keyAcqExtentX];
+            let acqExtentY = graphObj[keyAcqExtentY];
+            
+            const pm2 = performance.now()
+
+            const pm3 = performance.now()
+            
+            // Define scales
+            var x = d3.scaleLinear()
+                .domain(acqExtentX)
+                .range([0, width]);
+
+            var y = d3.scaleLinear()
+                .domain(acqExtentY)
+                .range([height, 0]);
+
+            const pm4 = performance.now()
+            // Add X axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x).ticks(3));
+
+            // Add Y axis
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            const pm5 = performance.now()
+            // Add X axis label
+            svg.append("text")
+                .attr("x", width / 2) // Center the label
+                .attr("y", height + margin.bottom - 10) // Position below the X-axis
+                .style("text-anchor", "middle") // Center the text
+                .style("font-size", "10px") // Make text smaller
+                .text("ms"); // Unit
+        
+            // Add Y axis label
+            svg.append("text")
+                .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
+                .attr("y", -margin.left + 5) // Adjust positioning
+                .attr("x", -height / 2) // Center the label
+                .attr("dy", "1em") // Fine-tune spacing
+                .style("text-anchor", "middle") // Center align text
+                .style("font-size", "10px") // Make text smaller
+                .text("mV"); // Unit
+
+            const pm6 = performance.now()
+            // // Add the acquisition line
+            // svg.append("path")
+                // .datum(acq_data)
+                // .attr("fill", "none")
+                // .attr("stroke", "steelblue")
+                // .attr("stroke-width", 1.5)
+                // .attr("d", d3.line()
+                    // .x(d => x(d.x))
+                    // .y(d => y(d.y))
+                // );
+            
+            // // Add the stimulus line
+            // svg.append("path")
+                // .datum(stim_data)
+                // .attr("fill", "none")
+                // .attr("stroke", "orangered")
+                // .attr("stroke-width", 1.5)
+                // .attr("d", d3.line()
+                    // .x(d => x(d.x))
+                    // .y(d => y(d.y))
+                // );
+                
+            const pe = performance.now()
+            
+            log(`Call to drawGraph took ${pe - pm6} ${pm6 - pm5} ${pm5 - pm4} ${pm4 - pm3} ${pm3 - pm2} ${pm2 - pm1}  ${pm1 - ps} milliseconds`)
+                
+            return svg;
+        }
+        
+        stimSvg = drawStimulusGraph(selector, graphObj);
+        acqSvg = drawAcquisitionGraph(selector, graphObj);
+        
+        let recordings = graphObj["recordings"];
+        var numGraphs  = recordings.length;
+        
+        let acqExtentX = graphObj[keyAcqExtentX];
+        let acqExtentY = graphObj[keyAcqExtentY];
+        
+        log("NumGraphs " + numGraphs);
+        for (let i = 0; i < numGraphs; i++)
+        {
+            let recording = recordings[i];
+            
+            let acq_xData = recording[keyAcq]["xData"];
+            let acq_yData = recording[keyAcq]["yData"];
+            let acq_data = acq_xData.map((x, i) => ({ x: x, y: acq_yData[i] }));
+            
+            var margin = { top: 20, right: 10, bottom: 40, left: 45 },
+                width = 200 - margin.left - margin.right,
+                height = 180 - margin.top - margin.bottom;
+                
+            // Define scales
+            var x = d3.scaleLinear()
+                .domain(acqExtentX)
+                .range([0, width]);
+
+            var y = d3.scaleLinear()
+                .domain(acqExtentY)
+                .range([height, 0]);
+            
+            let color = (i == numGraphs-1) ? "steelblue" : "grey";
+            let opacity = (i == numGraphs-1) ? 1.0 : 0.1;
+            // Add the acquisition line
+            acqSvg.append("path")
+                .datum(acq_data)
+                .attr("fill", "none")
+                .attr("stroke", color)
+                .attr("stroke-width", 1.5)
+                .attr("stroke-opacity", opacity)
+                .attr("d", d3.line()
+                    .x(d => x(d.x))
+                    .y(d => y(d.y))
+                );
+        }
+    }
+
+    // function drawStimulus(selector, graphObj)
+    // {
+        // // Set dimensions and margins
+        // var margin = { top: 40, right: 10, bottom: 20, left: 45 },
+            // width = 200 - margin.left - margin.right,
+            // height = 120 - margin.top - margin.bottom;
+        
+        // let stim_xData = graphObj[keyStim]["xData"];
+        // let stim_yData = graphObj[keyStim]["yData"];
+        // let titleData = graphObj[keyTitle];
+        
+        // let stim_data = stim_xData.map((x, i) => ({ x: x, y: stim_yData[i] }));
+        
+        // // Append the SVG object to the container
+        // var svg = d3.select(selector)
+            // .append("svg")
+            // .attr("width", width + margin.left + margin.right)
+            // .attr("height", height + margin.top + margin.bottom)
+            // .style("display", "block")
+            // .append("g")
+            // .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
         
         // // Add chart title
         // svg.append("text")
@@ -139,57 +258,43 @@ function drawTrace(jsonDoc)
             // .style("font-size", "12px")
             // .style("font-weight", "bold")
             // .text(titleData || ""); // default to empty string if title not provided
+
+        // // Define scales
+        // var x = d3.scaleLinear()
+            // .domain(d3.extent(stim_data, d => d.x))
+            // .range([0, width]);
+
+        // var y = d3.scaleLinear()
+            // .domain(d3.extent(stim_data, d => d.y * 2))
+            // .range([height, 0]);
+
+        // // Add X axis
+        // svg.append("g")
+            // .attr("transform", "translate(0," + height + ")")
+            // .call(d3.axisBottom(x).ticks(3));
+
+        // // Add Y axis
+        // svg.append("g")
+            // .call(d3.axisLeft(y).ticks(4));
         
-        // Define scales
-        var x = d3.scaleLinear()
-            .domain(d3.extent(acq_data, d => d.x))
-            .range([0, width]);
-
-        var y = d3.scaleLinear()
-            .domain([-120, 50])
-            .range([height, 0]);
-
-        const pm4 = performance.now()
-        // Add X axis
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x).ticks(3));
-
-        // Add Y axis
-        svg.append("g")
-            .call(d3.axisLeft(y));
-
-        const pm5 = performance.now()
-        // Add X axis label
-        svg.append("text")
-            .attr("x", width / 2) // Center the label
-            .attr("y", height + margin.bottom - 10) // Position below the X-axis
-            .style("text-anchor", "middle") // Center the text
-            .style("font-size", "10px") // Make text smaller
-            .text("ms"); // Unit
+        // // Add X axis label
+        // svg.append("text")
+            // .attr("x", width / 2) // Center the label
+            // .attr("y", height + margin.bottom - 10) // Position below the X-axis
+            // .style("text-anchor", "middle") // Center the text
+            // .style("font-size", "10px") // Make text smaller
+            // .text(""); // Unit
     
-        // Add Y axis label
-        svg.append("text")
-            .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
-            .attr("y", -margin.left + 5) // Adjust positioning
-            .attr("x", -height / 2) // Center the label
-            .attr("dy", "1em") // Fine-tune spacing
-            .style("text-anchor", "middle") // Center align text
-            .style("font-size", "10px") // Make text smaller
-            .text("mV"); // Unit
+        // // Add Y axis label
+        // svg.append("text")
+            // .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
+            // .attr("y", -margin.left + 5) // Adjust positioning
+            // .attr("x", -height / 2) // Center the label
+            // .attr("dy", "1em") // Fine-tune spacing
+            // .style("text-anchor", "middle") // Center align text
+            // .style("font-size", "10px") // Make text smaller
+            // .text("pA"); // Unit
 
-        const pm6 = performance.now()
-        // Add the acquisition line
-        svg.append("path")
-            .datum(acq_data)
-            .attr("fill", "none")
-            .attr("stroke", "steelblue")
-            .attr("stroke-width", 1.5)
-            .attr("d", d3.line()
-                .x(d => x(d.x))
-                .y(d => y(d.y))
-            );
-        
         // // Add the stimulus line
         // svg.append("path")
             // .datum(stim_data)
@@ -200,11 +305,122 @@ function drawTrace(jsonDoc)
                 // .x(d => x(d.x))
                 // .y(d => y(d.y))
             // );
-            
-        const pe = performance.now()
+    // }
+
+    // function drawGraph(selector, graphObj)
+    // {
+        // // Set dimensions and margins
+        // var margin = { top: 20, right: 10, bottom: 40, left: 45 },
+            // width = 200 - margin.left - margin.right,
+            // height = 180 - margin.top - margin.bottom;
         
-        log(`Call to drawGraph took ${pe - pm6} ${pm6 - pm5} ${pm5 - pm4} ${pm4 - pm3} ${pm3 - pm2} ${pm2 - pm1}  ${pm1 - ps} milliseconds`)
-    }
+        // const ps = performance.now()
+        
+        // // Append the SVG object to the container
+        // var svg = d3.select(selector)
+            // .append("svg")
+            // .attr("width", width + margin.left + margin.right)
+            // .attr("height", height + margin.top + margin.bottom)
+            // .style("display", "block")
+            // .append("g")
+            // .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // const pm1 = performance.now()
+
+        // // Avoid undefined access
+        // if (!graphObj[keyAcq] || !graphObj[keyStim]) {
+            // log(`Missing data for index ${i}:`, graphObj);
+            // return;
+        // }
+
+        // let acq_xData = graphObj[keyAcq]["xData"];
+        // let acq_yData = graphObj[keyAcq]["yData"];
+
+        // let stim_xData = graphObj[keyStim]["xData"];
+        // let stim_yData = graphObj[keyStim]["yData"];
+        // let titleData = graphObj[keyTitle];
+        
+        // const pm2 = performance.now()
+        // // Convert to D3-friendly format
+        // let acq_data = acq_xData.map((x, i) => ({ x: x, y: acq_yData[i] }));
+        // let stim_data = stim_xData.map((x, i) => ({ x: x, y: stim_yData[i] }));
+
+        // const pm3 = performance.now()
+        
+        // // // Add chart title
+        // // svg.append("text")
+            // // .attr("x", width / 2)
+            // // .attr("y", -margin.top / 2)
+            // // .attr("text-anchor", "middle")
+            // // .style("font-size", "12px")
+            // // .style("font-weight", "bold")
+            // // .text(titleData || ""); // default to empty string if title not provided
+        
+        // // Define scales
+        // var x = d3.scaleLinear()
+            // .domain(d3.extent(acq_data, d => d.x))
+            // .range([0, width]);
+
+        // var y = d3.scaleLinear()
+            // .domain([-120, 50])
+            // .range([height, 0]);
+
+        // const pm4 = performance.now()
+        // // Add X axis
+        // svg.append("g")
+            // .attr("transform", "translate(0," + height + ")")
+            // .call(d3.axisBottom(x).ticks(3));
+
+        // // Add Y axis
+        // svg.append("g")
+            // .call(d3.axisLeft(y));
+
+        // const pm5 = performance.now()
+        // // Add X axis label
+        // svg.append("text")
+            // .attr("x", width / 2) // Center the label
+            // .attr("y", height + margin.bottom - 10) // Position below the X-axis
+            // .style("text-anchor", "middle") // Center the text
+            // .style("font-size", "10px") // Make text smaller
+            // .text("ms"); // Unit
+    
+        // // Add Y axis label
+        // svg.append("text")
+            // .attr("transform", "rotate(-90)") // Rotate the text for Y-axis
+            // .attr("y", -margin.left + 5) // Adjust positioning
+            // .attr("x", -height / 2) // Center the label
+            // .attr("dy", "1em") // Fine-tune spacing
+            // .style("text-anchor", "middle") // Center align text
+            // .style("font-size", "10px") // Make text smaller
+            // .text("mV"); // Unit
+
+        // const pm6 = performance.now()
+        // // Add the acquisition line
+        // svg.append("path")
+            // .datum(acq_data)
+            // .attr("fill", "none")
+            // .attr("stroke", "steelblue")
+            // .attr("stroke-width", 1.5)
+            // .attr("d", d3.line()
+                // .x(d => x(d.x))
+                // .y(d => y(d.y))
+            // );
+        
+        // // // Add the stimulus line
+        // // svg.append("path")
+            // // .datum(stim_data)
+            // // .attr("fill", "none")
+            // // .attr("stroke", "orangered")
+            // // .attr("stroke-width", 1.5)
+            // // .attr("d", d3.line()
+                // // .x(d => x(d.x))
+                // // .y(d => y(d.y))
+            // // );
+            
+        // const pe = performance.now()
+        
+        // log(`Call to drawGraph took ${pe - pm6} ${pm6 - pm5} ${pm5 - pm4} ${pm4 - pm3} ${pm3 - pm2} ${pm2 - pm1}  ${pm1 - ps} milliseconds`)
+    // }
     const s2Time = performance.now()
     
     let graphArray = jsonDoc["graphs"]
@@ -225,8 +441,10 @@ function drawTrace(jsonDoc)
         newDiv.setAttribute("id", "container" + i);
         div.appendChild(newDiv);
 
-        drawStimulus("#container" + i, graphArray[i])
         drawGraph("#container" + i, graphArray[i])
+
+        //drawStimulus("#container" + i, graphArray[i])
+        //drawGraph("#container" + i, graphArray[i])
     }
     const endTime = performance.now()
     
