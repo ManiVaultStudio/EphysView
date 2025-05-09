@@ -166,34 +166,8 @@ void EphysView::onCellSelectionChanged()
     const auto& selectionIndices = _scene._ephysTraces->getSelectionIndices();
 
     Timer t("OnCellSelectedChanged");
-    //
-    //std::vector<Recording> cellAcquisitions;
-    //std::vector<Recording> cellStimuli;
-    //for (uint32_t index: selectionIndices)
-    //{
-    //    const std::vector<Recording>& acquisitions = _scene._ephysTraces->getData()[index].getAcquisitions();
-    //    const std::vector<Recording>& stimuli = _scene._ephysTraces->getData()[index].getStimuli();
-
-    //    if (!acquisitions.empty() && !stimuli.empty())
-    //    {
-    //        for (int i = 0; i < acquisitions.size(); i++)
-    //        {
-    //            const Recording& acquisition = acquisitions[i];
-    //            const Recording& stimulus = stimuli[i];
-
-    //            //if (acquisition.GetStimulusDescription().contains("SupraThresh"))
-    //            {
-    //                cellAcquisitions.push_back(acquisition);
-    //                cellStimuli.push_back(stimulus);
-    //                break;
-    //            }
-    //            
-    //        }
-    //    }
-    //}
 
     _ephysWidget->setData(_scene._ephysTraces->getData(), selectionIndices);
-    //_ephysWidget->setData(cellAcquisitions, cellStimuli);
 
     qDebug() << "Selection indices ephys: " << selectionIndices.size();
     qDebug() << "Selection indices ephys2: " << _scene._ephysTraces->getSelection()->getSelectionIndices().size();

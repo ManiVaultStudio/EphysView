@@ -17,6 +17,9 @@
 QStringList newFormatStims = { "X1PS_SubThresh", "X3LP_Rheo", "X4PS_SupraThresh" };
 QStringList oldFormatStims = { "C1LSFINEST150112", "C1LSCOARSE150216", "C1LSFINESTMICRO", "C1LSCOARSEMICRO" };
 
+QStringList subStims = { "X1PS_SubThresh" };
+QStringList supraStims = { "C1LSFINEST150112", "C1LSCOARSE150216", "C1LSFINESTMICRO", "C1LSCOARSEMICRO", "X3LP_Rheo", "X4PS_SupraThresh" };
+
 namespace
 {
     void addRecordingToArray(QJsonArray& recordingArray, const Recording& acquisition, const Recording& stimulus)
@@ -107,16 +110,16 @@ void EphysWebWidget::setData(std::vector<Experiment>& experiments, const std::ve
         }
 
         // Find out which stimsets to draw
-        bool newFormat = false;
-        for (const Recording& acquisition : acquisitions)
-        {
-            if (newFormatStims.contains(acquisition.GetStimulusDescription()))
-                newFormat = true;
-        }
+        //bool include = false;
+        //for (const Recording& acquisition : acquisitions)
+        //{
+        //    if (newFormatStims.contains(acquisition.GetStimulusDescription()))
+        //        newFormat = true;
+        //}
 
         // Build list of recordings that should be included in the cell's graph
         QJsonArray recordingArray;
-        QStringList& includedStims = newFormat ? newFormatStims : oldFormatStims;
+        QStringList& includedStims = supraStims;
 
         float axMin = std::numeric_limits<float>::max();
         float axMax = -std::numeric_limits<float>::max();
